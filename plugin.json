@@ -1,0 +1,30 @@
+{
+   "pluginmetadataversion": 2,
+   "name": "IFL",
+   "author": "Leandro Froes",
+   "type": [
+      "ui",
+      "helper"
+   ],
+   "api": [
+      "python3"
+   ],
+   "description": "A small plugin that provides an user-friendly way to navigate between functions and their references.",
+   "longdescription": "",
+   "license": {
+      "name": "CC BY 3.0",
+      "text": ""
+   },
+   "platforms": [
+      "Darwin",
+      "Windows",
+      "Linux"
+   ],
+   "installinstructions": {
+      "Darwin": "",
+      "Windows": "",
+      "Linux": ""
+   },
+   "version": "1.0",
+   "minimumbinaryninjaversion": 4958
+}
