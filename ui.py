@@ -585,9 +585,9 @@ class PaneWidget(QWidget):
             func_addr = func_info["main_info"]["start"]
 
             if func_addr == addr:
-                func_type = f"{func_info["main_info"]["type"]}"
-                func_name = f"{func_info["main_info"]["name"]}"
-                func_args = f"{func_info["main_info"]["args"]}"
+                func_type = func_info["main_info"]["type"]
+                func_name = func_info["main_info"]["name"]
+                func_args = func_info["main_info"]["args"]
                 label = f"{func_type} {func_name}{func_args}"
                 # Update the function definition label text
                 self.func_definition.setText(label)
