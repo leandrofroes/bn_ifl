@@ -22,6 +22,7 @@ from binaryninja.log import Logger
 from binaryninja import interaction
 
 from . import utils
+from . import funcs
 
 logger = Logger(session_id=0, logger_name="IFL")
 
@@ -129,29 +130,30 @@ class TableModel(QtCore.QAbstractTableModel):
         func_info = self.funcs_info_list[row]
 
         if col == self.COL_START:
-            return hex(func_info["main_info"]["start"])
+            return hex(func_info.start)
         if col == self.COL_END:
-            return hex(func_info["main_info"]["end"])
+            return hex(func_info.end)
         if col == self.COL_NAME:
-            return func_info["main_info"]["name"]
+            return funcs.get_name(self.bv, func_info.start)
         if col == self.COL_TYPE:
-            return func_info["main_info"]["type"]
+            return funcs.get_type_info(self.bv, func_info.start)
         if col == self.COL_ARGS:
-            return func_info["main_info"]["args"]
+            return funcs.get_args(self.bv, func_info.start)
         if col == self.COL_CALLER_REFS:
-            return func_info["main_info"]["referenced_by"]
+            return func_info.callers_refs_count
         if col == self.COL_CALLEE_REFS:
-            return func_info["main_info"]["refers_to"]
+            return func_info.callee_refs_count
         if col == self.COL_BB:
-            return func_info["main_info"]["basic_blocks"]
+            return funcs.get_basic_blocks_count(self.bv, func_info.start)
         if col == self.COL_INDIRECT_TRANSF:
-            return func_info["main_info"]["indirect_transfers"]
+            return func_info.indirect_transfers_count
         
         return None
 
-    def __init__(self, funcs_info_list) -> None:
+    def __init__(self, bv, funcs_info_list) -> None:
         super(TableModel, self).__init__()
 
+        self.bv = bv
         self.funcs_info_list = funcs_info_list
 
 # Qt API
@@ -168,12 +170,12 @@ class TableModel(QtCore.QAbstractTableModel):
         col = index.column()
         row = index.row()
 
-        func_info = self.funcs_info_list[row]["main_info"]
+        func_info = self.funcs_info_list[row]
 
         if role == QtCore.Qt.UserRole:
             if col == self.COL_END:
-                return func_info["end"]
-            return func_info["start"]
+                return func_info.end
+            return func_info.start
         elif role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
             return self._display_data(row, col)
         else:
@@ -295,7 +297,7 @@ class RefsTableModel(QtCore.QAbstractTableModel):
         index = 0
 
         for func_info in self.funcs_info_list:
-            if addr >= func_info["main_info"]["start"] and addr <= func_info["main_info"]["end"]:
+            if addr >= func_info.start and addr <= func_info.end:
                 return index
             
             index += 1
@@ -310,11 +312,11 @@ class RefsTableModel(QtCore.QAbstractTableModel):
             self.refs_list = []
         else:
             if self.ref_type == self.REF_FROM:
-                self.refs_list = self.funcs_info_list[self.curr_index]["callers_refs_info"]
+                self.refs_list = self.funcs_info_list[self.curr_index].callers_info
             if self.ref_type == self.REF_TO:
-                self.refs_list = self.funcs_info_list[self.curr_index]["callees_refs_info"]
+                self.refs_list = self.funcs_info_list[self.curr_index].callee_info
             if self.ref_type == self.REF_TRANSF:
-                self.refs_list = self.funcs_info_list[self.curr_index]["indirect_transfers_info"]
+                self.refs_list = self.funcs_info_list[self.curr_index].indirect_transfers_info
 
         self.reset()
 
@@ -418,7 +420,7 @@ class PaneWidget(QWidget):
 
         self.data_manager = DataManager()
 
-        self.table_model = TableModel(self.funcs_info_list)
+        self.table_model = TableModel(self.bv, self.funcs_info_list)
 
         self.funcs_sorted_model = QtCore.QSortFilterProxyModel()
         self.funcs_sorted_model.setSourceModel(self.table_model)
@@ -582,24 +584,22 @@ class PaneWidget(QWidget):
         :return: None
         """
         for func_info in self.funcs_info_list:
-            func_addr = func_info["main_info"]["start"]
-
-            if func_addr == addr:
-                func_type = func_info["main_info"]["type"]
-                func_name = func_info["main_info"]["name"]
-                func_args = func_info["main_info"]["args"]
+            if func_info.start == addr:
+                func_type = funcs.get_type_info(self.bv, func_info.start)
+                func_name = funcs.get_name(self.bv, func_info.start)
+                func_args = funcs.get_args(self.bv, func_info.start)
                 label = f"{func_type} {func_name}{func_args}"
                 # Update the function definition label text
                 self.func_definition.setText(label)
 
                 # Update the tabs titles
-                refsfrom_count = func_info["main_info"]["referenced_by"]
+                refsfrom_count = func_info.callers_refs_count
                 self.refs_tabs.setTabText(0, f"Is referred by {refsfrom_count}:")
 
-                refsto_count = func_info["main_info"]["refers_to"]
+                refsto_count = func_info.callee_refs_count
                 self.refs_tabs.setTabText(1, f"Refers to {refsto_count}:")
 
-                indirect_transf_count = len(func_info["indirect_transfers_info"])
+                indirect_transf_count = func_info.indirect_transfers_count
                 self.refs_tabs.setTabText(2, f"Transfers indirectly to {indirect_transf_count}:")
 
     def _update_views(self, data: int) -> None:
